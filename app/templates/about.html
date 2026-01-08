@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-8">
+    <h3>What this is</h3>
+    <p class="text-muted">{{ settings.site_name }} pulls opportunities (funding, calls for papers, conferences) and research items from RSS/Atom feeds and tags them by region. It also exposes a weekly RSS digest that you can plug into an RSS newsletter in MailerLite.</p>
+
+    <h5 class="mt-4">How the free newsletter works</h5>
+    <ol>
+      <li>Run the app (Docker Compose).</li>
+      <li>Open <code>/admin/ingest</code> once (or let the worker do it) to populate items.</li>
+      <li>In MailerLite, create an <b>RSS campaign</b> that points to <code>{{ settings.public_base_url }}/feeds/newsletter.xml</code>.</li>
+      <li>Mailing lists are automatically created per region when users subscribe on the site.</li>
+    </ol>
+
+    <p class="small text-muted mb-0">Note: MailerLite's API lets us add subscribers and manage groups, but building/sending a fully-designed email via API may depend on your plan. RSS campaigns are the most reliable free approach.</p>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="fw-semibold">Your digest feed</h6>
+        <p class="small text-muted mb-2">Use this URL in your RSS campaign:</p>
+        <code>{{ settings.public_base_url }}/feeds/newsletter.xml</code>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

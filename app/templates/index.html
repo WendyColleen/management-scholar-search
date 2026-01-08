@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-9">
+    <form class="row g-2 align-items-end mb-3" method="get" action="/">
+      <div class="col-md-3">
+        <label class="form-label">Region</label>
+        <select class="form-select" name="region">
+          {% for r in regions %}
+            <option value="{{ r }}" {% if r == selected_region %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Type</label>
+        <select class="form-select" name="item_type">
+          {% for t in types %}
+            <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Search</label>
+        <input class="form-control" name="q" value="{{ q }}" placeholder="e.g., Horizon Europe, diversity, CFP" />
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100" type="submit">Filter</button>
+      </div>
+    </form>
+
+    {% if not items %}
+      <div class="alert alert-info">No items yet. Click <a href="/admin/ingest">/admin/ingest</a> once to pull in the first batch.</div>
+    {% endif %}
+
+    <div class="d-flex flex-column gap-3">
+      {% for it in items %}
+        <div class="card item-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between flex-wrap gap-2">
+              <h5 class="mb-1"><a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.title }}</a></h5>
+              <div class="small text-muted">
+                {{ (it.published or it.fetched_at).strftime('%Y-%m-%d') }} · {{ it.source }}
+              </div>
+            </div>
+            <div class="small text-muted mb-2">
+              <span class="badge text-bg-light border">{{ it.region }}</span>
+              <span class="badge text-bg-light border">{{ it.item_type }}</span>
+              <span class="badge text-bg-light border">{{ it.topic }}</span>
+            </div>
+            {% if it.summary %}
+              <p class="mb-0">{{ it.summary }}</p>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="col-lg-3">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h6 class="fw-semibold">Free newsletter</h6>
+        <p class="small text-muted mb-3">Subscribe by region. We’ll add you to the matching MailerLite group.</p>
+        <form method="post" action="/subscribe" class="d-grid gap-2">
+          <input type="email" class="form-control" name="email" placeholder="you@uni.edu" required>
+          <select class="form-select" name="region">
+            <option value="All">Global</option>
+            {% for r in settings.regions %}
+              <option value="{{ r }}">{{ r }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-outline-primary" type="submit">Subscribe</button>
+        </form>
+        <hr>
+        <div class="small">
+          Newsletter RSS: <a href="/feeds/newsletter.xml">/feeds/newsletter.xml</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="ad-box mb-3">
+      {% if settings.adsense_client_id %}
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="{{ settings.adsense_client_id }}"
+             data-ad-slot="{{ settings.adsense_ad_slot }}"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+      {% else %}
+        <div class="text-center p-3">
+          <div class="fw-semibold">Ad space</div>
+          <div class="small">Set ADSENSE_CLIENT_ID (and ADSENSE_AD_SLOT) in .env</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-body small text-muted">
+        Tip: add more RSS feeds in <code>app/sources/sources.yaml</code>.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

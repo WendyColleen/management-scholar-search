@@ -1,0 +1,50 @@
+services:
+  web:
+    build: .
+    container_name: managementscholarsearch_web
+    ports:
+      - "8000:8000"
+    environment:
+      SITE_NAME: "${SITE_NAME:-ManagementScholarSearch}"
+      DOMAIN_NAME: "${DOMAIN_NAME:-managementscholarsearch.com}"
+      REGIONS: "${REGIONS:-North America,Europe,Asia,Global}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      EMAIL_API_KEY: "${EMAIL_API_KEY:-}"
+      ADSENSE_CLIENT_ID: "${ADSENSE_CLIENT_ID:-}"
+      ADSENSE_AD_SLOT: "${ADSENSE_AD_SLOT:-}"
+      DB_PATH: "/data/mss.sqlite"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://localhost:8000}"
+      TIMEZONE: "${TIMEZONE:-Europe/Vienna}"
+      NEWSLETTER_DAY: "${NEWSLETTER_DAY:-THU}"
+      NEWSLETTER_HOUR: "${NEWSLETTER_HOUR:-09}"
+      NEWSLETTER_MINUTE: "${NEWSLETTER_MINUTE:-00}"
+    volumes:
+      - mss_data:/data
+    restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: managementscholarsearch_worker
+    command: ["python", "-m", "app.worker"]
+    environment:
+      SITE_NAME: "${SITE_NAME:-ManagementScholarSearch}"
+      DOMAIN_NAME: "${DOMAIN_NAME:-managementscholarsearch.com}"
+      REGIONS: "${REGIONS:-North America,Europe,Asia,Global}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      EMAIL_API_KEY: "${EMAIL_API_KEY:-}"
+      ADSENSE_CLIENT_ID: "${ADSENSE_CLIENT_ID:-}"
+      ADSENSE_AD_SLOT: "${ADSENSE_AD_SLOT:-}"
+      DB_PATH: "/data/mss.sqlite"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://localhost:8000}"
+      TIMEZONE: "${TIMEZONE:-Europe/Vienna}"
+      NEWSLETTER_DAY: "${NEWSLETTER_DAY:-THU}"
+      NEWSLETTER_HOUR: "${NEWSLETTER_HOUR:-09}"
+      NEWSLETTER_MINUTE: "${NEWSLETTER_MINUTE:-00}"
+    volumes:
+      - mss_data:/data
+    restart: unless-stopped
+    depends_on:
+      - web
+
+volumes:
+  mss_data:

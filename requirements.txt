@@ -1,0 +1,11 @@
+fastapi==0.115.6
+uvicorn[standard]==0.30.6
+jinja2==3.1.4
+sqlmodel==0.0.22
+feedparser==6.0.11
+PyYAML==6.0.2
+apscheduler==3.10.4
+python-dotenv==1.0.1
+requests==2.32.3
+openai==1.55.3
+pydantic==2.9.2
