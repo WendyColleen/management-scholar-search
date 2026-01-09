@@ -1,9 +1,8 @@
-"""ManagementScholarSearch static-site generator.
+"""
+ManagementScholarSearch static-site generator.
 
-Goal: zero-cost hosting via GitHub Pages.
-
-Run locally (daily if you like):
-  python generate_site.py
+Run locally:
+  py generate_site.py
 
 It will:
   1) Ingest RSS sources into a local SQLite db (data/mss.sqlite)
@@ -16,10 +15,11 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from sqlmodel import select
 
 from app.config import settings
@@ -28,10 +28,14 @@ from app.feed import build_rss
 from app.ingest import ingest_once
 from app.models import Item
 
-
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 DOCS_DIR = ROOT / "docs"
+
+
+def _load_env() -> None:
+    """Load .env when running locally (so MAILERLITE_FORM_URL etc. are available)."""
+    load_dotenv(dotenv_path=ROOT / ".env", override=False)
 
 
 def _ensure_local_db_path() -> None:
@@ -60,7 +64,9 @@ def _item_to_dict(it: Item) -> dict[str, Any]:
 def _render_index(items: list[dict[str, Any]]) -> str:
     # Minimal, fast, static UI with client-side filtering.
     regions = ["All"] + settings.regions
-    types = ["All", "funding", "cfp", "conference", "journal", "other"]
+
+    # You said you do not want journal articles on the site.
+    types = ["All", "funding", "cfp", "conference", "other"]
 
     # AdSense: script loads only if client id is set.
     ads_script = ""
@@ -96,7 +102,7 @@ def _render_index(items: list[dict[str, Any]]) -> str:
         </div>
         """
 
-    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     # Basic HTML with Bootstrap CDN. Filtering happens in JS using docs/assets/items.json.
     # Newsletter subscribe button is populated client-side from docs/assets/public_config.json
@@ -144,7 +150,7 @@ def _render_index(items: list[dict[str, Any]]) -> str:
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Search</label>
-                  <input class="form-control" id="searchInput" placeholder="e.g., Horizon Europe, diversity, CFP" />
+                  <input class="form-control" id="searchInput" placeholder="e.g., grant, fellowship, call for papers" />
                 </div>
               </div>
             </div>
@@ -208,7 +214,7 @@ def _render_index(items: list[dict[str, Any]]) -> str:
           const typeOk =
             itType === type ||
             (type === 'funding' && (itType === 'grant' || itType === 'call' || itType === 'cfp')) ||
-            (type === 'cfp' && (itType === 'call' || itType === 'funding'));
+            (type === 'cfp' && (itType === 'call'));
           if (!typeOk) return false;
         }}
 
@@ -278,12 +284,16 @@ def _render_index(items: list[dict[str, Any]]) -> str:
 
         const resp = await fetch('assets/items.json');
         state.items = await resp.json();
-        state.filtered = state.items;
+
+        // Funding-first default view
+        const typeSel = document.getElementById('typeSelect');
+        if (typeSel) typeSel.value = 'funding';
+
+        applyFilters();
 
         document.getElementById('regionSelect').addEventListener('change', applyFilters);
         document.getElementById('typeSelect').addEventListener('change', applyFilters);
         document.getElementById('searchInput').addEventListener('input', applyFilters);
-        render();
       }}
 
       boot();
@@ -293,7 +303,34 @@ def _render_index(items: list[dict[str, Any]]) -> str:
 """
 
 
+def _write_public_config() -> None:
+    """
+    Ensure docs/assets/public_config.json exists and is updated with MAILERLITE_FORM_URL from .env (if provided).
+    This file is safe to commit: only public URLs go here.
+    """
+    cfg_path = DOCS_DIR / "assets" / "public_config.json"
+    cfg: dict[str, Any] = {}
+
+    if cfg_path.exists():
+        try:
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+            if not isinstance(cfg, dict):
+                cfg = {}
+        except Exception:
+            cfg = {}
+
+    # Only set/override mailerlite_form_url if env provides it.
+    ml = (os.getenv("MAILERLITE_FORM_URL") or "").strip()
+    if ml:
+        cfg["mailerlite_form_url"] = ml
+    else:
+        cfg.setdefault("mailerlite_form_url", "")
+
+    cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def main() -> None:
+    _load_env()
     _ensure_local_db_path()
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     init_db()
@@ -308,10 +345,12 @@ def main() -> None:
             select(Item).order_by(Item.fetched_at.desc()).limit(int(os.getenv("MAX_ITEMS", "500")))
         ).all()
 
-    items_dict = [_item_to_dict(it) for it in items]
+    # Exclude journals from the public site entirely
+    items_public = [it for it in items if (it.item_type or "").lower() != "journal"]
+    items_dict = [_item_to_dict(it) for it in items_public]
 
-    # Build RSS (newsletter)
-    rss_items = items[: int(os.getenv("NEWSLETTER_ITEMS", "60"))]
+    # Build RSS (newsletter) from non-journal items
+    rss_items = items_public[: int(os.getenv("NEWSLETTER_ITEMS", "60"))]
     rss = build_rss(
         title=f"{settings.site_name} – Weekly Digest",
         link=settings.public_base_url.rstrip("/"),
@@ -329,21 +368,14 @@ def main() -> None:
     (DOCS_DIR / "feeds" / "newsletter.xml").write_text(rss, encoding="utf-8")
     (DOCS_DIR / "index.html").write_text(_render_index(items_dict), encoding="utf-8")
 
-    # Public (non-secret) config for the static site.
-    # This is safe to commit: it should only contain public URLs, not API keys.
-    public_cfg_path = DOCS_DIR / "assets" / "public_config.json"
-    if not public_cfg_path.exists():
-        public_cfg_path.write_text(
-            json.dumps({"mailerlite_form_url": ""}, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+    _write_public_config()
 
     # GitHub Pages niceties
     (DOCS_DIR / ".nojekyll").write_text("", encoding="utf-8")
     (DOCS_DIR / "CNAME").write_text(settings.domain_name.strip(), encoding="utf-8")
 
     print(f"Static site written to: {DOCS_DIR}")
-    print("Next: git add docs && git commit -m \"Update\" && git push")
+    print('Next: commit/push the "docs/" folder (GitHub Desktop is fine).')
 
 
 if __name__ == "__main__":

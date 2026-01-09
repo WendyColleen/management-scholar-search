@@ -1,23 +1,34 @@
-# RSS/Atom sources used for ingestion.
-# default_region/default_type are fallbacks.
+# Global academic funding, fellowships, and calls
 
 sources:
-  - name: "AIB Insights"
-    url: "https://insights.aib.world/feed"
-    default_region: "Global"
-    default_type: "other"
-
-  - name: "EU Funding & Tenders Portal Updates"
-    url: "https://ec.europa.eu/info/funding-tenders-opportunities/portal/screen/opportunities/topic-search/rss"
+  # ---------- EUROPE ----------
+  - name: "EU Funding & Tenders – New Calls"
+    url: "https://ec.europa.eu/info/funding-tenders/opportunities/data/referenceData/grantTenders-rss.xml"
     default_region: "Europe"
     default_type: "funding"
 
-  - name: "Horizon Magazine (EU R&I news)"
-    url: "https://projects.research-and-innovation.ec.europa.eu/en/horizon-magazine/rss.xml"
+  - name: "ERC – European Research Council"
+    url: "https://erc.europa.eu/news-events/rss.xml"
     default_region: "Europe"
-    default_type: "other"
+    default_type: "funding"
 
-  - name: "AOM Journals - AMJ eTOC"
-    url: "https://journals.aom.org/action/showFeed?type=etoc&feed=rss&jc=amj"
-    default_region: "Global"
-    default_type: "journal"
+  - name: "DFG – German Research Foundation"
+    url: "https://www.dfg.de/en/service/rss/rss_calls"
+    default_region: "Europe"
+    default_type: "funding"
+
+  - name: "Volkswagen Foundation"
+    url: "https://www.volkswagenstiftung.de/en/news/rss"
+    default_region: "Europe"
+    default_type: "funding"
+
+  # ---------- USA ----------
+  - name: "NSF – Funding Opportunities"
+    url: "https://www.nsf.gov/rss/rss_funding.xml"
+    default_region: "North America"
+    default_type: "funding"
+
+  - name: "NIH – Grants & Funding"
+    url: "https://grants.nih.gov/grants/rss/nih_grants.xml"
+    default_region: "North America"
+    default_type: "funding"
