@@ -96,19 +96,10 @@ def _render_index(items: list[dict[str, Any]]) -> str:
         </div>
         """
 
-    # Newsletter: for static hosting, direct users to your MailerLite form.
-    ml_form_url = os.getenv("MAILERLITE_FORM_URL", "").strip()
-    if ml_form_url:
-        subscribe_cta = f'<a class="btn btn-outline-primary w-100" href="{ml_form_url}" target="_blank" rel="noopener">Subscribe (MailerLite)</a>'
-    else:
-        subscribe_cta = (
-            '<div class="small text-muted">Add your MailerLite signup form link by setting '
-            '<code>MAILERLITE_FORM_URL</code> in <code>.env</code>.</div>'
-        )
-
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
     # Basic HTML with Bootstrap CDN. Filtering happens in JS using docs/assets/items.json.
+    # Newsletter subscribe button is populated client-side from docs/assets/public_config.json
     return f"""<!doctype html>
 <html lang="en">
   <head>
@@ -168,7 +159,17 @@ def _render_index(items: list[dict[str, Any]]) -> str:
             <div class="card-body">
               <h6 class="fw-semibold">Free newsletter</h6>
               <p class="small text-muted mb-3">Weekly digest. Subscribe by region.</p>
-              {subscribe_cta}
+
+              <div id="subscribeArea">
+                <a id="subscribeBtn" class="btn btn-outline-primary w-100 d-none"
+                   href="#" target="_blank" rel="noopener">Subscribe</a>
+
+                <div id="subscribeHelp" class="small text-muted">
+                  Add your MailerLite signup form link in <code>docs/assets/public_config.json</code>
+                  as <code>"mailerlite_form_url"</code>.
+                </div>
+              </div>
+
               <hr>
               <div class="small">RSS feed: <a href="feeds/newsletter.xml">feeds/newsletter.xml</a></div>
             </div>
@@ -190,9 +191,27 @@ def _render_index(items: list[dict[str, Any]]) -> str:
 
       function norm(s) {{ return (s || '').toLowerCase(); }}
 
+      // More forgiving matching to reduce "No matching items" caused by label variants.
       function matches(it, region, type, q) {{
-        if (region !== 'All' && it.region !== region) return false;
-        if (type !== 'All' && it.item_type !== type) return false;
+        const itRegion = it.region || '';
+        const itType = it.item_type || '';
+
+        if (region !== 'All') {{
+          const regionOk =
+            itRegion === region ||
+            (region === 'Europe' && (itRegion === 'EU' || itRegion === 'European Union')) ||
+            (region === 'North America' && (itRegion === 'USA' || itRegion === 'United States' || itRegion === 'Canada'));
+          if (!regionOk) return false;
+        }}
+
+        if (type !== 'All') {{
+          const typeOk =
+            itType === type ||
+            (type === 'funding' && (itType === 'grant' || itType === 'call' || itType === 'cfp')) ||
+            (type === 'cfp' && (itType === 'call' || itType === 'funding'));
+          if (!typeOk) return false;
+        }}
+
         if (q) {{
           const hay = norm(it.title + ' ' + it.summary + ' ' + it.topic + ' ' + it.source);
           if (!hay.includes(q)) return false;
@@ -238,10 +257,29 @@ def _render_index(items: list[dict[str, Any]]) -> str:
         render();
       }}
 
+      async function loadPublicConfig() {{
+        try {{
+          const resp = await fetch('assets/public_config.json', {{ cache: 'no-store' }});
+          if (!resp.ok) return;
+          const cfg = await resp.json();
+          const url = (cfg.mailerlite_form_url || '').trim();
+          if (!url) return;
+
+          const btn = document.getElementById('subscribeBtn');
+          const help = document.getElementById('subscribeHelp');
+          btn.href = url;
+          btn.classList.remove('d-none');
+          if (help) help.classList.add('d-none');
+        }} catch (e) {{}}
+      }}
+
       async function boot() {{
+        await loadPublicConfig();
+
         const resp = await fetch('assets/items.json');
         state.items = await resp.json();
         state.filtered = state.items;
+
         document.getElementById('regionSelect').addEventListener('change', applyFilters);
         document.getElementById('typeSelect').addEventListener('change', applyFilters);
         document.getElementById('searchInput').addEventListener('input', applyFilters);
@@ -266,7 +304,9 @@ def main() -> None:
 
     # Load recent items
     with get_session() as session:
-        items = session.exec(select(Item).order_by(Item.fetched_at.desc()).limit(int(os.getenv("MAX_ITEMS", "500")))).all()
+        items = session.exec(
+            select(Item).order_by(Item.fetched_at.desc()).limit(int(os.getenv("MAX_ITEMS", "500")))
+        ).all()
 
     items_dict = [_item_to_dict(it) for it in items]
 
@@ -283,9 +323,20 @@ def main() -> None:
     (DOCS_DIR / "assets").mkdir(parents=True, exist_ok=True)
     (DOCS_DIR / "feeds").mkdir(parents=True, exist_ok=True)
 
-    (DOCS_DIR / "assets" / "items.json").write_text(json.dumps(items_dict, ensure_ascii=False, indent=2), encoding="utf-8")
+    (DOCS_DIR / "assets" / "items.json").write_text(
+        json.dumps(items_dict, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     (DOCS_DIR / "feeds" / "newsletter.xml").write_text(rss, encoding="utf-8")
     (DOCS_DIR / "index.html").write_text(_render_index(items_dict), encoding="utf-8")
+
+    # Public (non-secret) config for the static site.
+    # This is safe to commit: it should only contain public URLs, not API keys.
+    public_cfg_path = DOCS_DIR / "assets" / "public_config.json"
+    if not public_cfg_path.exists():
+        public_cfg_path.write_text(
+            json.dumps({"mailerlite_form_url": ""}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
     # GitHub Pages niceties
     (DOCS_DIR / ".nojekyll").write_text("", encoding="utf-8")
