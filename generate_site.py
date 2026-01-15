@@ -183,13 +183,7 @@ def _render_index(items: list[dict[str, Any]]) -> str:
 
           {ad_box}
 
-          <div class="card">
-            <div class="card-body small text-muted">
-              Tip: add more RSS feeds in <code>app/sources/sources.yaml</code>.
-            </div>
-          </div>
-        </div>
-      </div>
+          
     </main>
 
     <script>
