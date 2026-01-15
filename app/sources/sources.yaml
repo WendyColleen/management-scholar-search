@@ -1,19 +1,35 @@
 # Global academic funding, fellowships, and calls
+# Focus: management, social sciences, interdisciplinary research
 
 sources:
-  # ---------- EUROPE ----------
+
+  # ---------- EUROPE (EU LEVEL) ----------
   - name: "EU Funding & Tenders – New Calls"
     url: "https://ec.europa.eu/info/funding-tenders/opportunities/data/referenceData/grantTenders-rss.xml"
     default_region: "Europe"
     default_type: "funding"
 
-  - name: "ERC – European Research Council"
+  - name: "ERC – European Research Council (News & Calls)"
     url: "https://erc.europa.eu/news-events/rss.xml"
     default_region: "Europe"
     default_type: "funding"
 
+  # ---------- AUSTRIA ----------
+  # FWF does not expose a clean calls-only RSS; newsletter/news feed still captures calls
+  - name: "FWF – Austrian Science Fund"
+    url: "https://www.fwf.ac.at/en/news/rss"
+    default_region: "Europe"
+    default_type: "funding"
+
+  # Grants.at aggregates FWF, TWF, ministries, and regional funds
+  - name: "Grants.at – Austrian Funding Portal"
+    url: "https://grants.at/en/rss"
+    default_region: "Europe"
+    default_type: "funding"
+
+  # ---------- GERMANY ----------
   - name: "DFG – German Research Foundation"
-    url: "https://www.dfg.de/en/service/rss/rss_calls"
+    url: "https://www.dfg.de/service/rss/de/323556/feed.rss"
     default_region: "Europe"
     default_type: "funding"
 
@@ -22,13 +38,49 @@ sources:
     default_region: "Europe"
     default_type: "funding"
 
+  # ---------- UNITED KINGDOM ----------
+  # UKRI umbrella feed (covers ESRC, AHRC, etc.)
+  - name: "UKRI – Funding Opportunities"
+    url: "https://www.ukri.org/opportunity/feed/"
+    default_region: "Europe"
+    default_type: "funding"
+
+  # ---------- SCANDINAVIA / NORTHERN EUROPE ----------
+  - name: "NordForsk – Nordic Research Funding"
+    url: "https://www.nordforsk.org/news/rss"
+    default_region: "Europe"
+    default_type: "funding"
+
+  # ---------- INTERNATIONAL / GLOBAL ----------
+  - name: "OECD – Research & Policy Calls"
+    url: "https://www.oecd.org/rss"
+    default_region: "Global"
+    default_type: "funding"
+
+  - name: "World Bank – Research & Development Funding"
+    url: "https://www.worldbank.org/en/research/rss"
+    default_region: "Global"
+    default_type: "funding"
+
   # ---------- USA ----------
   - name: "NSF – Funding Opportunities"
     url: "https://www.nsf.gov/rss/rss_funding.xml"
     default_region: "North America"
     default_type: "funding"
 
+  # NIH includes many notices; rely on downstream filtering/scoring
   - name: "NIH – Grants & Funding"
     url: "https://grants.nih.gov/grants/rss/nih_grants.xml"
+    default_region: "North America"
+    default_type: "funding"
+
+  # Grants.gov captures many interdisciplinary and social-science-relevant calls
+  - name: "Grants.gov – New Opportunities"
+    url: "https://www.grants.gov/rss/GG_NewOppByCategory.xml"
+    default_region: "North America"
+    default_type: "funding"
+
+  - name: "Grants.gov – Modified Opportunities"
+    url: "https://www.grants.gov/rss/GG_OppModByCategory.xml"
     default_region: "North America"
     default_type: "funding"
